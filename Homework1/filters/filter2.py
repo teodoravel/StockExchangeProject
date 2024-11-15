@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import json
 from pathlib import Path
 
-# Define paths for the database and JSON file to store last dates
+# paths for the database and JSON file to store last dates
 THIS_FOLDER = Path(__file__).parent.resolve()
 DB_PATH = THIS_FOLDER / "stock_data.db"
 LAST_DATES_PATH = THIS_FOLDER / "last_dates.json"
@@ -17,6 +17,22 @@ BASE_URL = 'https://www.mse.mk/mk/stats/symbolhistory/'
 def get_last_data_date(publisher_code):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+
+    # Create the stock_data table if it doesn't exist
+    cursor.execute('''CREATE TABLE IF NOT EXISTS stock_data (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        publisher_code TEXT,
+                        date TEXT,
+                        price TEXT,
+                        max TEXT,
+                        min TEXT,
+                        avg TEXT,
+                        percent_change TEXT,
+                        quantity TEXT,
+                        best_turnover TEXT,
+                        total_turnover TEXT,
+                        UNIQUE(publisher_code, date) ON CONFLICT REPLACE
+                    )''')
 
     # Check for the most recent date
     cursor.execute("SELECT MAX(date) FROM stock_data WHERE publisher_code = ?", (publisher_code,))
@@ -40,7 +56,7 @@ def fetch_stock_data(publisher_code, from_date, to_date):
         print(f"Error fetching data for {publisher_code}. Status code: {response.status_code}")
         return None
 
-# Parse stock data table from HTML
+# Parse stock data table from html
 def parse_stock_table(html):
     soup = BeautifulSoup(html, 'html.parser')
     table = soup.find('table', {'id': 'resultsTable'})
@@ -91,7 +107,7 @@ def save_to_database(publisher_code, data):
     conn.close()
     print(f"Data saved for {publisher_code} in the database.")
 
-# Process all publishers and save last dates to JSON
+# Process all publishers and save last dates to json
 def process_publishers(publisher_codes):
     last_dates = {}
 
@@ -113,7 +129,7 @@ def process_publishers(publisher_codes):
             print(f"Issuer {publisher_code} has data up to {last_date}.")
             last_dates[publisher_code] = last_date
 
-    # Save the last dates to JSON
+    # Save the last dates to json
     with open(LAST_DATES_PATH, 'w') as json_file:
         json.dump(last_dates, json_file)
     print("Last dates saved to last_dates.json")
@@ -139,7 +155,7 @@ def fetch_publisher_codes():
 
     return publisher_codes
 
-# Main function
+# Main funct
 def main():
     publisher_codes = fetch_publisher_codes()
     if publisher_codes:

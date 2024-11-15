@@ -11,7 +11,7 @@ DB_PATH = THIS_FOLDER / "stock_data.db"
 LAST_DATES_PATH = THIS_FOLDER / "last_dates.json"
 BASE_URL = 'https://www.mse.mk/mk/stats/symbolhistory/'
 
-# Format prices 
+# Format prices
 def format_price(value):
     try:
         return "{:,.2f}".format(float(value.replace(',', ''))).replace(',', ' ')
@@ -67,29 +67,36 @@ def parse_stock_table(html):
             })
     return data
 
-# Function to save new stock data to the database
-def save_new_data(publisher_code, data):
+# Function to save new stock data to the db if it has a newer date
+def save_new_data(publisher_code, data, last_date):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    new_data_added = False
 
     for record in data:
-        cursor.execute('''INSERT OR REPLACE INTO stock_data (publisher_code, date, price, max, min, avg, percent_change, quantity, best_turnover, total_turnover)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
-            publisher_code,
-            record['Date'],
-            record['Price'],
-            record['Max'],
-            record['Min'],
-            record['Avg'],
-            record['Percent Change'],
-            record['Quantity'],
-            record['Best Turnover'],
-            record['Total Turnover']
-        ))
-        print(f"Added record for {publisher_code} on {record['Date']}")
+        record_date = record['Date']
+        
+        # Only add records with dates newer than `last_date`
+        if record_date > last_date:
+            cursor.execute('''INSERT OR REPLACE INTO stock_data (publisher_code, date, price, max, min, avg, percent_change, quantity, best_turnover, total_turnover)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+                publisher_code,
+                record_date,
+                record['Price'],
+                record['Max'],
+                record['Min'],
+                record['Avg'],
+                record['Percent Change'],
+                record['Quantity'],
+                record['Best Turnover'],
+                record['Total Turnover']
+            ))
+            print(f"Added record for {publisher_code} on {record_date}")
+            new_data_added = True
 
     conn.commit()
     conn.close()
+    return new_data_added
 
 # Function to fetch and format missing data for each publisher
 def fetch_and_format_missing_data():
@@ -110,7 +117,11 @@ def fetch_and_format_missing_data():
         if html:
             data = parse_stock_table(html)
             if data:
-                save_new_data(publisher_code, data)
+                # Only add records if they have a date after `from_date`
+                if save_new_data(publisher_code, data, from_date):
+                    print(f"New data added for {publisher_code} from {from_date}.")
+                else:
+                    print(f"No new data for {publisher_code} from {from_date}.")
             else:
                 print(f"No new data found for {publisher_code} from {from_date}.")
         else:
