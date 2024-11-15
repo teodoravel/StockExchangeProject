@@ -5,17 +5,17 @@ from pathlib import Path
 
 # Функција за автоматско преземање на издавачите
 def fetch_publisher_codes():
-    url = 'https://www.mse.mk/mk/stats/symbolhistory/avk'  # URL на Македонската берза за историски податоци
+    url = 'https://www.mse.mk/mk/stats/symbolhistory/avk'  # url на Македонската берза за историски податоци
     response = requests.get(url)
 
     if response.status_code != 200:
         print("Не успеа да се преземе страницата")
         return []
 
-    # Анализирање на HTML содржината
+    # Анализирање на html содржината
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Извлекување на сите издавачи од менијата
+    # Извлекување на сите издавачи од мени
     publisher_codes = []
     dropdown = soup.find('select', {'id': 'Code'})  # Наоѓаме селект елемент за издавачите
     if dropdown:
@@ -30,11 +30,9 @@ def fetch_publisher_codes():
 
 # Функција за зачувување на издавачите во база на податоци
 def save_to_database(publishers):
-    # Дефинирање на апсолутната патека до базата на податоци
+    # Дефинирање на апсолутната патека до базата 
     THIS_FOLDER = Path(__file__).parent.resolve()
     db_path = THIS_FOLDER / "publishers.db"
-
-  
 
     # Поврзување со SQLite база на податоци (или креирање ако не постои)
     conn = sqlite3.connect(db_path)
@@ -61,7 +59,7 @@ def save_to_database(publishers):
     conn.close()
     print(f"Успешно се вметнаа {len(publishers)} издавачи во базата на податоци.")
 
-# Главна функција
+# main funct
 def main():
     # Преземање на издавачите
     publisher_codes = fetch_publisher_codes()
